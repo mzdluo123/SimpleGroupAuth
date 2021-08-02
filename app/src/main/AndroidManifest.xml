@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.maPluginTemplate">
+
+    <application
+        android:icon="@mipmap/ic_launcher"
+        android:label="MiraiAndroid插件"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material" >
+
+        <meta-data
+            android:name="miraiandroid_plugin"
+            android:value="true"/>
+
+
+    </application>
+
+</manifest>

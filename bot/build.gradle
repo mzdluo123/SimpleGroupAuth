@@ -1,0 +1,18 @@
+plugins {
+    id("net.mamoe.mirai-console") version "2.6.7" // mirai-console version
+    id 'kotlin'
+}
+
+mirai {
+}
+
+
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_7
+    targetCompatibility = JavaVersion.VERSION_1_7
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+}

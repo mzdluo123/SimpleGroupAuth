@@ -1,0 +1,1 @@
+adb shell am start io.github.mzdluo123.mirai.android/io.github.mzdluo123.mirai.android.activity.MainActivity

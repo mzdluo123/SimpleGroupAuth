@@ -1,0 +1,31 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+buildscript {
+    // 在这里设置kotlin版本
+    ext.kotlin_version = "1.4.30"
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // 在这里选择合适的插件版本
+        // idea 用户请使用4.0
+        // android studio用户请使用 4.1.0
+        classpath "com.android.tools.build:gradle:4.0.2"
+
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
