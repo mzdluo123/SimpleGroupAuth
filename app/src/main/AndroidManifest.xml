@@ -4,7 +4,7 @@
 
     <application
         android:icon="@mipmap/ic_launcher"
-        android:label="MiraiAndroid插件"
+        android:label="SimpleGroupAuth"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material" >
