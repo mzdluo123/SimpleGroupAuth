@@ -30,15 +30,15 @@ class EventListener : SimpleListenerHost() {
 
     @EventHandler
     suspend fun GroupMessageEvent.onMsg() {
-        if (this.message.contentToString() == "test"){
-            val member = sender
-            if (ScriptChallenge.hasScript(member.group.id)){
-                addToNeedAuth(member as NormalMember)
-                launch { scriptSession(member) }
-                return
-            }
-
-        }
+//        if (this.message.contentToString() == "test"){
+//            val member = sender
+//            if (ScriptChallenge.hasScript(member.group.id)){
+//                addToNeedAuth(member as NormalMember)
+//                launch { scriptSession(member) }
+//                return
+//            }
+//
+//        }
     }
 
     @EventHandler
