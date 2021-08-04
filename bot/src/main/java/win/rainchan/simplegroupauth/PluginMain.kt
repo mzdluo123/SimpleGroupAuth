@@ -19,6 +19,7 @@ object PluginMain : KotlinPlugin(
         ConfigData.reload()
         PluginSwitchCommand.register()
         EventListener().registerTo(GlobalEventChannel)
+        ScriptChallenge.init()
         logger.info("SimpleGroupAuth已启动")
     }
 

@@ -12,7 +12,7 @@ import okhttp3.Request
 import okhttp3.Response
 
 object HttpUtils {
-    private val client = OkHttpClient.Builder().build()
+     val client = OkHttpClient.Builder().build()
     suspend fun getCaptCha(): Response {
         val req = Request.Builder().get().url("https://mail.sina.com.cn/cgi-bin/imgcode.php").build()
         return withContext(Dispatchers.IO) {
@@ -43,9 +43,12 @@ object HttpUtils {
                 return false
             }
             if (rspCode != -102){
+                PluginMain.logger.info("验证成功")
                 return true
             }
+            PluginMain.logger.info("验证失败")
             return false
+
         }
         PluginMain.logger.error("校验验证码时出现问题 ${rsp.message}")
         return false
