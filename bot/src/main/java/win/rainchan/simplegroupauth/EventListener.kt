@@ -1,6 +1,7 @@
 package win.rainchan.simplegroupauth
 
 import io.ktor.http.*
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.mamoe.mirai.console.data.PluginDataExtensions
@@ -68,19 +69,22 @@ class EventListener : SimpleListenerHost() {
     suspend fun captchaSession( member: NormalMember) {
         val group = member.group
         val groupId = group.id
-        group.sendMessage(At(member) + PlainText("欢迎来到本群，为保障良好的聊天环境，请在60秒内输入以下验证码。"))
+        group.sendMessage(At(member) + PlainText("欢迎来到本群，为保障良好的聊天环境，请在120秒内输入以下验证码。验证码不区分大小写"))
         val rsp = HttpUtils.getCaptCha()
         val cookie = rsp.headers("Set-Cookie")
         if (!rsp.isSuccessful || cookie.isEmpty()) {
             group.sendMessage("网络错误 ${rsp.message}")
             return
         }
+        var timeoutJob:Job? = null
+        var  listener:Listener<GroupMessageEvent>? = null
+        var tries = 0
         val img = rsp.body!!.bytes().toExternalResource()
         group.sendMessage(At(member) + img.uploadAsImage(group))
         img.close()
         rsp.close()
 
-        val listener = GlobalEventChannel.subscribeAlways<GroupMessageEvent> {
+        listener = GlobalEventChannel.subscribeAlways<GroupMessageEvent> {
             val thisMember = this.sender
             if (thisMember !is NormalMember){
                 return@subscribeAlways
@@ -94,24 +98,34 @@ class EventListener : SimpleListenerHost() {
                 if (result) {
                     group.sendMessage(member.at() + PlainText("您已通过验证！"))
                     needAuth[groupId]?.remove(member.id)
-                } else {
+                    timeoutJob?.cancel()
+                    listener?.complete()
+                    return@subscribeAlways
+                }
+                tries ++
+                if (tries >=3){
                     group.sendMessage(member.at() + PlainText("您未通过验证，请重新加群"))
                     needAuth[groupId]?.remove(member.id)
                     launch {
                         delay(5000)
                         member.kick("请重试")
                     }
+                    timeoutJob?.cancel()
+                    listener?.complete()
+                    return@subscribeAlways
                 }
+                group.sendMessage(member.at() + PlainText("验证码错误，您还有${3-tries}次机会"))
+
             }
         }
-        launch {
-            delay(65*1000)
+        timeoutJob = launch {
+            delay(120*1000)
             if (needAuth[groupId]?.contains(member.id) == true){
                 group.sendMessage(member.at() + PlainText("验证超时，请重新加群"))
                 needAuth[groupId]?.remove(member.id)
                 member.kick("请重试")
             }
-            listener.complete()
+
         }
 
     }

@@ -1,10 +1,11 @@
 plugins {
-    id("net.mamoe.mirai-console") version "2.7-RC-dev-2" // mirai-console version
+    id("net.mamoe.mirai-console") version "2.7-RC-dev-3" // mirai-console version
     id 'kotlin'
 }
 
 mirai {
 }
+
 
 
 
