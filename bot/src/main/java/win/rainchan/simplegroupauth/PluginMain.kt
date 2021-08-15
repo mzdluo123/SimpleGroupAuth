@@ -12,7 +12,7 @@ object PluginMain : KotlinPlugin(
     JvmPluginDescription(
         id = "win.rainchan.simplegroupauth",
         name = "SimpleGroupAuth",
-        version = "0.1.0"
+        version = "0.1.1"
     )
 ) {
     override fun onEnable() {
