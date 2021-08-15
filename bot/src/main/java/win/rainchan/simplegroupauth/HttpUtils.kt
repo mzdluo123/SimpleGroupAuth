@@ -20,14 +20,14 @@ object HttpUtils {
         }
     }
 
-    suspend fun verifyCaptcha(cookie: List<String>,code:String):Boolean{
+    suspend fun verifyCaptcha(cookie: String,code:String):Boolean{
         val req = Request.Builder().post(
            FormBody.Builder().add("phonenumber","15874523695") // random data
                .add("email","fgsj842376tysd@sina.com")
                .add("imgvcode",code)
                .build()
         ).url("https://mail.sina.com.cn/cgi-bin/RegPhoneCode.php")
-            .addHeader("cookie",cookie.joinToString(separator = ";"))
+            .addHeader("cookie",cookie)
             .addHeader("referer","https://mail.sina.com.cn/register/regmail.php")
             .addHeader("origin","https://mail.sina.com.cn")
             .addHeader("user-agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36 Edg/92.0.902.55")

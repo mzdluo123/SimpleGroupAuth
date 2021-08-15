@@ -1,14 +1,9 @@
 package win.rainchan.simplegroupauth
 
-import io.ktor.http.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import net.mamoe.mirai.console.data.PluginDataExtensions
-import net.mamoe.mirai.contact.Group
-import net.mamoe.mirai.contact.Member
 import net.mamoe.mirai.contact.NormalMember
-import net.mamoe.mirai.contact.getMember
 import net.mamoe.mirai.event.EventHandler
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.Listener
@@ -26,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 class EventListener : SimpleListenerHost() {
     private val needAuth = ConcurrentHashMap<Long, HashSet<Long>>()  // 每个群需要验证的人
-    // private val captchaCookie = ConcurrentHashMap<Long, Cookie>()
+    private val captchaCookie = ConcurrentHashMap<Long, String>()
 
     @EventHandler
     suspend fun GroupMessageEvent.onMsg() {
@@ -60,12 +55,12 @@ class EventListener : SimpleListenerHost() {
                 launch { captchaSession(member) }
             }
             ConfigData.AuthType.ENTERNED_CHALLENGE -> {
-                if (ScriptChallenge.hasScript(member.group.id)){
+                if (ScriptChallenge.hasScript(member.group.id)) {
                     addToNeedAuth(member)
                     launch { scriptSession(member) }
                     return
                 }
-               PluginMain.logger.error("群${group.id}验证脚本未配置")
+                PluginMain.logger.error("群${group.id}验证脚本未配置")
             }
 
         }
@@ -76,7 +71,8 @@ class EventListener : SimpleListenerHost() {
         accountSet.add(member.id)
         needAuth[member.group.id] = accountSet
     }
-    private suspend fun launchTimeOutJob(time:Long, member: NormalMember): Job {
+
+    private suspend fun launchTimeOutJob(time: Long, member: NormalMember): Job {
         val groupId = member.group.id
         return launch {
             delay(time)
@@ -89,53 +85,66 @@ class EventListener : SimpleListenerHost() {
         }
     }
 
-    private suspend fun kickWrongAnswer(member: NormalMember){
+    private suspend fun kickWrongAnswer(member: NormalMember) {
         member.group.sendMessage(member.at() + PlainText("您未通过验证，请重新加群"))
         needAuth[member.group.id]?.remove(member.id)
+        captchaCookie.remove(member.id)
         launch {
             delay(5000)
             member.kick("请重试")
         }
     }
 
-    private suspend fun captchaSession(member: NormalMember) {
+    private suspend fun sendCaptcha(member: NormalMember): Boolean {
         val group = member.group
-        val groupId = group.id
-        group.sendMessage(At(member) + PlainText("欢迎来到本群，为保障良好的聊天环境，请在120秒内输入以下验证码。验证码不区分大小写"))
         val rsp = HttpUtils.getCaptCha()
         val cookie = rsp.headers("Set-Cookie")
         if (!rsp.isSuccessful || cookie.isEmpty()) {
             group.sendMessage("网络错误 ${rsp.message}")
-            return
+            return false
         }
-        var timeoutJob: Job? = null
-        var listener: Listener<GroupMessageEvent>? = null
-        var tries = 0
         val img = rsp.body!!.bytes().toExternalResource()
         group.sendMessage(At(member) + img.uploadAsImage(group))
         img.close()
         rsp.close()
-        timeoutJob = launchTimeOutJob(120*1000,member)
+
+        captchaCookie[member.id] = cookie.joinToString(separator = ";")
+        return true
+    }
+
+
+    private suspend fun captchaSession(member: NormalMember) {
+        val group = member.group
+        val groupId = group.id
+        var timeoutJob: Job? = null
+        var listener: Listener<GroupMessageEvent>? = null
+        var tries = 0
+
+        group.sendMessage(At(member) + PlainText("欢迎来到本群，为保障良好的聊天环境，请在180秒内输入以下验证码。验证码不区分大小写"))
+        sendCaptcha(member)
+        timeoutJob = launchTimeOutJob(180_000, member)
         listener = GlobalEventChannel.subscribeAlways<GroupMessageEvent> {
             val thisMember = this.sender
             if (thisMember == member) {
                 val code = message.contentToString().trim()
-                val result = HttpUtils.verifyCaptcha(cookie, code)
+                val result = HttpUtils.verifyCaptcha(captchaCookie.getOrDefault(member.id, ""), code)
                 if (result) {
                     group.sendMessage(member.at() + PlainText("您已通过验证！"))
                     needAuth[groupId]?.remove(member.id)
+                    captchaCookie.remove(member.id)
                     timeoutJob.cancel()
                     listener?.complete()
                     return@subscribeAlways
                 }
                 tries++
-                if (tries >= 3) {
+                if (tries >= 5) {
                     kickWrongAnswer(member)
                     timeoutJob.cancel()
                     listener?.complete()
                     return@subscribeAlways
                 }
-                group.sendMessage(member.at() + PlainText("验证码错误，您还有${3 - tries}次机会"))
+                group.sendMessage(member.at() + PlainText("验证码错误，您还有${5 - tries}次机会"))
+                sendCaptcha(member)
             }
         }
 
@@ -150,13 +159,13 @@ class EventListener : SimpleListenerHost() {
         val groupId = group.id
         group.sendMessage(At(member) + PlainText("欢迎来到本群，为保障良好的聊天环境，请在120秒内回答下列问题"))
         group.sendMessage(member.at() + PlainText(ScriptChallenge.getQuestion(group.id)!!))
-        timeoutJob = launchTimeOutJob(120*1000,member)
+        timeoutJob = launchTimeOutJob(120 * 1000, member)
         listener = GlobalEventChannel.subscribeAlways<GroupMessageEvent> {
             val thisMember = this.sender
             if (thisMember == member) {
                 val answer = message.contentToString()
                 group.sendMessage(member.at() + PlainText("正在验证,请勿重试。。。"))
-                if (ScriptChallenge.auth(groupId,member.id,answer)){
+                if (ScriptChallenge.auth(groupId, member.id, answer)) {
                     needAuth[groupId]?.remove(member.id)
                     timeoutJob.cancel()
                     listener?.complete()
@@ -164,8 +173,8 @@ class EventListener : SimpleListenerHost() {
                     return@subscribeAlways
                 }
                 tries++
-                if (tries >= 3){
-                   kickWrongAnswer(member)
+                if (tries >= 3) {
+                    kickWrongAnswer(member)
                     timeoutJob.cancel()
                     listener?.complete()
                     return@subscribeAlways
@@ -176,3 +185,4 @@ class EventListener : SimpleListenerHost() {
         }
     }
 }
+
