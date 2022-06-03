@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap
 class EventListener : SimpleListenerHost() {
     private val needAuth = ConcurrentHashMap<Long, HashSet<Long>>()  // 每个群需要验证的人
     private val captchaCookie = ConcurrentHashMap<Long, String>()
+	private val tencentBots = listOf("2854196310", "2854196306") // 只添加了小冰和Q群管家
 
     @EventHandler
     suspend fun GroupMessageEvent.onMsg() {
@@ -49,6 +50,7 @@ class EventListener : SimpleListenerHost() {
     @EventHandler
     suspend fun MemberJoinEvent.onJoin() {
         delay(2000)
+			if (member.id.toString() in tencentBots) return
         when (ConfigData.authType(group)) {
             ConfigData.AuthType.ENTERNED_CAPTCHA -> {
                 addToNeedAuth(member)
